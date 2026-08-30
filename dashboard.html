@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bili Hu Coffees -- BI Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1"></script>
+<style>
+:root {
+  --bg-page: #f4f1ec;
+  --bg-card: #ffffff;
+  --bg-header: #3c2a1e;
+  --accent: #a35c33;
+  --accent-2: #1f7a5c;
+  --accent-3: #c0392b;
+  --text-primary: #2b221a;
+  --text-secondary: #7a6a5a;
+  --text-on-dark: #f4f1ec;
+  --radius: 10px;
+  --gap: 18px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-page); color: var(--text-primary);
+}
+.dashboard-container { max-width: 1320px; margin: 0 auto; padding: 20px; }
+.dashboard-header {
+  background: linear-gradient(135deg, var(--bg-header), #5a4230);
+  color: var(--text-on-dark); padding: 22px 26px; border-radius: var(--radius);
+  margin-bottom: var(--gap); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+}
+.dashboard-header h1 { font-size: 21px; font-weight: 700; margin: 0 0 4px 0; }
+.dashboard-header p { margin: 0; font-size: 13px; opacity: .85; }
+.badge { background: rgba(255,255,255,.12); padding: 6px 12px; border-radius: 20px; font-size: 12px; }
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--gap); margin-bottom: var(--gap); }
+.kpi-card { background: var(--bg-card); border-radius: var(--radius); padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.08); border-left: 4px solid var(--accent); }
+.kpi-label { font-size: 11.5px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
+.kpi-value { font-size: 26px; font-weight: 700; }
+.kpi-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+.section-title { font-size: 15px; font-weight: 700; margin: 28px 0 12px 2px; color: var(--text-primary); }
+.chart-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: var(--gap); margin-bottom: var(--gap); }
+.chart-container { background: var(--bg-card); border-radius: var(--radius); padding: 18px 22px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.chart-container h3 { font-size: 13.5px; font-weight: 700; margin: 0 0 4px 0; }
+.chart-container .note { font-size: 11.5px; color: var(--text-secondary); margin-bottom: 12px; }
+.chart-container canvas { max-height: 280px; }
+.table-section { background: var(--bg-card); border-radius: var(--radius); padding: 18px 22px; box-shadow: 0 1px 3px rgba(0,0,0,.08); overflow-x: auto; margin-bottom: var(--gap); }
+.data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.data-table thead th { text-align: left; padding: 8px 10px; border-bottom: 2px solid #e5ddd2; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: .4px; }
+.data-table tbody td { padding: 8px 10px; border-bottom: 1px solid #f0ebe2; }
+.data-table tbody tr:hover { background: #faf7f2; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.tag-high { background: #fde3e0; color: var(--accent-3); }
+.tag-med { background: #fdeecb; color: #a3691f; }
+.tag-low { background: #dcf0e6; color: var(--accent-2); }
+.dashboard-footer { text-align: center; font-size: 12px; color: var(--text-secondary); padding: 20px 0 10px; }
+@media (max-width: 768px) { .kpi-row { grid-template-columns: repeat(2,1fr); } .chart-row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="dashboard-container">
+
+  <header class="dashboard-header">
+    <div>
+      <h1>☕ Bili Hu Coffees -- Business Intelligence Dashboard</h1>
+      <p>Unified view across Shopify, Wholesale, Tally &amp; IoT roast logs -- SME BI System Design Showcase</p>
+    </div>
+    <div class="badge" id="data-date"></div>
+  </header>
+
+  <section class="kpi-row" id="kpi-row"></section>
+
+  <div class="section-title">Demand Forecasting (SARIMA)</div>
+  <section class="chart-row">
+    <div class="chart-container" style="grid-column: 1 / -1;">
+      <h3>Weekly Roasted Bean Demand -- Actual vs 12-Week Forecast</h3>
+      <div class="note">Backtest MAPE (last 12 weeks): <span id="mape-note"></span>% -- shaded band is the 80% confidence interval</div>
+      <canvas id="demandChart"></canvas>
+    </div>
+  </section>
+
+  <div class="section-title">Customer Segmentation &amp; Retention</div>
+  <section class="chart-row">
+    <div class="chart-container">
+      <h3>RFM Segments -- Revenue Contribution</h3>
+      <div class="note">K-Means clusters on Recency / Frequency / Monetary value</div>
+      <canvas id="segmentChart"></canvas>
+    </div>
+    <div class="chart-container">
+      <h3>SKU Performance -- Revenue</h3>
+      <div class="note">OLAP roll-up across Retail + Wholesale channels</div>
+      <canvas id="skuChart"></canvas>
+    </div>
+  </section>
+
+  <div class="section-title">Production Quality (IoT)</div>
+  <section class="chart-row">
+    <div class="chart-container" style="grid-column: 1 / -1;">
+      <h3>Weekly Avg Roast Temperature Variance vs Target</h3>
+      <div class="note">Flags the April–May 2025 quality-drift window for maintenance follow-up</div>
+      <canvas id="roastChart"></canvas>
+    </div>
+  </section>
+
+  <div class="section-title">Churn Risk -- Top Subscribers to Act On</div>
+  <section class="table-section">
+    <table class="data-table" id="churnTable">
+      <thead><tr><th>Customer</th><th>Region</th><th>Days Since Last Order</th><th>Orders</th><th>Lifetime Value (₹)</th><th>Churn Risk</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <div class="section-title">Cross-Sell Opportunities (Market Basket Analysis)</div>
+  <section class="table-section">
+    <table class="data-table" id="rulesTable">
+      <thead><tr><th>If customer buys</th><th>Also recommend</th><th>Support</th><th>Confidence</th><th>Lift</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <footer class="dashboard-footer">
+    Synthetic data generated for demonstration purposes -- schema and analytical methods mirror the proposed
+    Azure Synapse / Power BI architecture. Built with Python (pandas, statsmodels, scikit-learn, mlxtend) + Chart.js.
+  </footer>
+</div>
+
+<script>
+const DATA = {"kpis": {"total_revenue": 68466975.0, "total_orders": 66076, "aov": 1036.0, "active_customers": 1431, "forecast_mape": 31.9, "top_sku": "Coorg Estate Reserve", "avg_roast_variance": 1.63, "at_risk_customers": 15}, "demand_history": [{"week": "2025-07-13", "actual_units": 1608}, {"week": "2025-07-20", "actual_units": 1592}, {"week": "2025-07-27", "actual_units": 1319}, {"week": "2025-08-03", "actual_units": 890}, {"week": "2025-08-10", "actual_units": 1910}, {"week": "2025-08-17", "actual_units": 1659}, {"week": "2025-08-24", "actual_units": 1369}, {"week": "2025-08-31", "actual_units": 1408}, {"week": "2025-09-07", "actual_units": 1949}, {"week": "2025-09-14", "actual_units": 2093}, {"week": "2025-09-21", "actual_units": 1805}, {"week": "2025-09-28", "actual_units": 1193}, {"week": "2025-10-05", "actual_units": 1644}, {"week": "2025-10-12", "actual_units": 1715}, {"week": "2025-10-19", "actual_units": 1829}, {"week": "2025-10-26", "actual_units": 1843}, {"week": "2025-11-02", "actual_units": 1354}, {"week": "2025-11-09", "actual_units": 2582}, {"week": "2025-11-16", "actual_units": 1883}, {"week": "2025-11-23", "actual_units": 2020}, {"week": "2025-11-30", "actual_units": 1941}, {"week": "2025-12-07", "actual_units": 1864}, {"week": "2025-12-14", "actual_units": 1986}, {"week": "2025-12-21", "actual_units": 2260}, {"week": "2025-12-28", "actual_units": 2132}, {"week": "2026-01-04", "actual_units": 556}], "demand_forecast": [{"week": "2026-01-11", "forecast_units": 2186, "lower_80": 1722, "upper_80": 2649}, {"week": "2026-01-18", "forecast_units": 2279, "lower_80": 1809, "upper_80": 2749}, {"week": "2026-01-25", "forecast_units": 2117, "lower_80": 1647, "upper_80": 2587}, {"week": "2026-02-01", "forecast_units": 1718, "lower_80": 1247, "upper_80": 2189}, {"week": "2026-02-08", "forecast_units": 1908, "lower_80": 1434, "upper_80": 2382}, {"week": "2026-02-15", "forecast_units": 1822, "lower_80": 1344, "upper_80": 2299}, {"week": "2026-02-22", "forecast_units": 1906, "lower_80": 1426, "upper_80": 2387}, {"week": "2026-03-01", "forecast_units": 1675, "lower_80": 1190, "upper_80": 2159}, {"week": "2026-03-08", "forecast_units": 2039, "lower_80": 1551, "upper_80": 2527}, {"week": "2026-03-15", "forecast_units": 1837, "lower_80": 1346, "upper_80": 2328}, {"week": "2026-03-22", "forecast_units": 1954, "lower_80": 1460, "upper_80": 2449}, {"week": "2026-03-29", "forecast_units": 1713, "lower_80": 1215, "upper_80": 2211}], "segments": [{"segment": "Loyal / Subscribers", "customers": 390, "avg_recency_days": 10.5, "avg_frequency": 66.7, "avg_monetary": 44348.9, "total_revenue": 17296082.8}, {"segment": "Champions", "customers": 168, "avg_recency_days": 13.3, "avg_frequency": 122.0, "avg_monetary": 81408.6, "total_revenue": 13676640.0}, {"segment": "New / Low Value", "customers": 753, "avg_recency_days": 14.8, "avg_frequency": 20.6, "avg_monetary": 13649.4, "total_revenue": 10277984.8}, {"segment": "At Risk", "customers": 75, "avg_recency_days": 326.8, "avg_frequency": 43.7, "avg_monetary": 28927.7, "total_revenue": 2169580.2}], "sku_performance": [{"sku_name": "Coorg Estate Reserve", "category": "Single Origin", "units": 25790, "revenue": 14200992.06}, {"sku_name": "Chikmagalur Single Origin", "category": "Single Origin", "units": 26696, "revenue": 13923580.75}, {"sku_name": "Monsoon Malabar", "category": "Blend", "units": 25077, "revenue": 11269400.08}, {"sku_name": "Decaf House Blend", "category": "Decaf", "units": 25401, "revenue": 10535408.52}, {"sku_name": "Bili Signature Blend", "category": "Blend", "units": 26748, "revenue": 10264934.31}, {"sku_name": "Cold Brew Concentrate", "category": "Cold Brew", "units": 24485, "revenue": 8272659.62}], "roast_quality": [{"week": "2025-01-12", "avg_variance_c": 1.315200000000001}, {"week": "2025-01-19", "avg_variance_c": 1.0751851851851864}, {"week": "2025-01-26", "avg_variance_c": 0.8585714285714283}, {"week": "2025-02-02", "avg_variance_c": 1.0859259259259255}, {"week": "2025-02-09", "avg_variance_c": 0.9486363636363652}, {"week": "2025-02-16", "avg_variance_c": 1.0542105263157926}, {"week": "2025-02-23", "avg_variance_c": 0.9854545454545458}, {"week": "2025-03-02", "avg_variance_c": 1.1233333333333348}, {"week": "2025-03-09", "avg_variance_c": 1.3372000000000026}, {"week": "2025-03-16", "avg_variance_c": 1.544347826086957}, {"week": "2025-03-23", "avg_variance_c": 1.1954545454545449}, {"week": "2025-03-30", "avg_variance_c": 1.0976190476190468}, {"week": "2025-04-06", "avg_variance_c": 3.9732142857142856}, {"week": "2025-04-13", "avg_variance_c": 4.156153846153845}, {"week": "2025-04-20", "avg_variance_c": 4.7600000000000025}, {"week": "2025-04-27", "avg_variance_c": 4.42608695652174}, {"week": "2025-05-04", "avg_variance_c": 5.077142857142856}, {"week": "2025-05-11", "avg_variance_c": 5.2928571428571445}, {"week": "2025-05-18", "avg_variance_c": 3.4972000000000003}, {"week": "2025-05-25", "avg_variance_c": 0.9010714285714292}, {"week": "2025-06-01", "avg_variance_c": 1.2307407407407405}, {"week": "2025-06-08", "avg_variance_c": 1.0493103448275864}, {"week": "2025-06-15", "avg_variance_c": 1.226666666666668}, {"week": "2025-06-22", "avg_variance_c": 1.4886363636363662}, {"week": "2025-06-29", "avg_variance_c": 1.4979999999999976}, {"week": "2025-07-06", "avg_variance_c": 0.897407407407407}, {"week": "2025-07-13", "avg_variance_c": 1.4722222222222223}, {"week": "2025-07-20", "avg_variance_c": 1.3640909090909077}, {"week": "2025-07-27", "avg_variance_c": 0.9469565217391328}, {"week": "2025-08-03", "avg_variance_c": 1.1399999999999997}, {"week": "2025-08-10", "avg_variance_c": 1.312727272727274}, {"week": "2025-08-17", "avg_variance_c": 1.2235}, {"week": "2025-08-24", "avg_variance_c": 1.285000000000003}, {"week": "2025-08-31", "avg_variance_c": 1.3781818181818215}, {"week": "2025-09-07", "avg_variance_c": 1.074761904761903}, {"week": "2025-09-14", "avg_variance_c": 1.2087499999999995}, {"week": "2025-09-21", "avg_variance_c": 1.2169565217391285}, {"week": "2025-09-28", "avg_variance_c": 1.3092857142857153}, {"week": "2025-10-05", "avg_variance_c": 1.3765517241379306}, {"week": "2025-10-12", "avg_variance_c": 1.130714285714289}, {"week": "2025-10-19", "avg_variance_c": 1.42269230769231}, {"week": "2025-10-26", "avg_variance_c": 0.8834782608695612}, {"week": "2025-11-02", "avg_variance_c": 1.1703571428571442}, {"week": "2025-11-09", "avg_variance_c": 1.0995652173913064}, {"week": "2025-11-16", "avg_variance_c": 1.3137499999999978}, {"week": "2025-11-23", "avg_variance_c": 1.0837500000000009}, {"week": "2025-11-30", "avg_variance_c": 1.0368181818181794}, {"week": "2025-12-07", "avg_variance_c": 1.0690909090909069}, {"week": "2025-12-14", "avg_variance_c": 1.4858333333333331}, {"week": "2025-12-21", "avg_variance_c": 1.052307692307694}, {"week": "2025-12-28", "avg_variance_c": 1.3983333333333334}, {"week": "2026-01-04", "avg_variance_c": 1.2755555555555511}], "churn_risk": [{"customer_id": "CUS101293", "region": "Bengaluru", "recency_days": 668, "frequency": 56, "monetary": 36101.87, "churn_probability": 1.0}, {"customer_id": "CUS100271", "region": "Bengaluru", "recency_days": 633, "frequency": 49, "monetary": 29940.14, "churn_probability": 1.0}, {"customer_id": "CUS101037", "region": "Chennai", "recency_days": 631, "frequency": 65, "monetary": 41730.21, "churn_probability": 1.0}, {"customer_id": "CUS101214", "region": "Hyderabad", "recency_days": 612, "frequency": 24, "monetary": 18881.55, "churn_probability": 1.0}, {"customer_id": "CUS101156", "region": "Hyderabad", "recency_days": 574, "frequency": 17, "monetary": 11941.41, "churn_probability": 1.0}, {"customer_id": "CUS100362", "region": "Hyderabad", "recency_days": 524, "frequency": 16, "monetary": 10528.98, "churn_probability": 1.0}, {"customer_id": "CUS101062", "region": "Delhi NCR", "recency_days": 489, "frequency": 29, "monetary": 20428.11, "churn_probability": 1.0}, {"customer_id": "CUS101021", "region": "Hyderabad", "recency_days": 491, "frequency": 52, "monetary": 33672.08, "churn_probability": 1.0}, {"customer_id": "CUS101363", "region": "Chennai", "recency_days": 481, "frequency": 31, "monetary": 21882.6, "churn_probability": 1.0}, {"customer_id": "CUS101020", "region": "Delhi NCR", "recency_days": 479, "frequency": 72, "monetary": 46392.88, "churn_probability": 1.0}, {"customer_id": "CUS100636", "region": "Chennai", "recency_days": 449, "frequency": 33, "monetary": 20122.97, "churn_probability": 1.0}, {"customer_id": "CUS100096", "region": "Pune", "recency_days": 438, "frequency": 21, "monetary": 12618.58, "churn_probability": 1.0}, {"customer_id": "CUS100846", "region": "Pune", "recency_days": 433, "frequency": 45, "monetary": 29628.19, "churn_probability": 1.0}, {"customer_id": "CUS100727", "region": "Hyderabad", "recency_days": 429, "frequency": 58, "monetary": 37731.76, "churn_probability": 1.0}, {"customer_id": "CUS100743", "region": "Pune", "recency_days": 404, "frequency": 25, "monetary": 15556.55, "churn_probability": 1.0}], "association_rules": [{"antecedents": "Monsoon Malabar", "consequents": "Cold Brew Concentrate", "support": 0.226, "confidence": 0.529, "lift": 1.373}, {"antecedents": "Cold Brew Concentrate", "consequents": "Monsoon Malabar", "support": 0.226, "confidence": 0.588, "lift": 1.373}, {"antecedents": "Bili Signature Blend", "consequents": "Decaf House Blend", "support": 0.242, "confidence": 0.566, "lift": 1.328}, {"antecedents": "Decaf House Blend", "consequents": "Bili Signature Blend", "support": 0.242, "confidence": 0.566, "lift": 1.328}, {"antecedents": "Chikmagalur Single Origin", "consequents": "Coorg Estate Reserve", "support": 0.238, "confidence": 0.558, "lift": 1.285}, {"antecedents": "Coorg Estate Reserve", "consequents": "Chikmagalur Single Origin", "support": 0.238, "confidence": 0.548, "lift": 1.285}]};
+
+document.getElementById('data-date').textContent = 'Generated ' + new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
+document.getElementById('mape-note').textContent = DATA.kpis.forecast_mape;
+
+function fmtCurrency(v) {
+  if (v >= 1e7) return '₹' + (v/1e7).toFixed(2) + 'Cr';
+  if (v >= 1e5) return '₹' + (v/1e5).toFixed(2) + 'L';
+  if (v >= 1e3) return '₹' + (v/1e3).toFixed(1) + 'K';
+  return '₹' + v.toFixed(0);
+}
+function fmtNum(v) { return v >= 1e3 ? (v/1e3).toFixed(1) + 'K' : v.toLocaleString(); }
+
+const kpiRow = document.getElementById('kpi-row');
+const kpiCards = [
+  { label: 'Total Revenue (24 mo)', value: fmtCurrency(DATA.kpis.total_revenue), sub: 'Retail + Wholesale' },
+  { label: 'Total Orders', value: fmtNum(DATA.kpis.total_orders), sub: DATA.kpis.active_customers + ' unique customers' },
+  { label: 'Avg Order Value', value: fmtCurrency(DATA.kpis.aov), sub: 'Blended across channels' },
+  { label: 'Forecast Accuracy', value: (100 - DATA.kpis.forecast_mape).toFixed(1) + '%', sub: 'SARIMA backtest, 12-wk holdout' },
+  { label: 'Top SKU', value: DATA.kpis.top_sku, sub: 'By total revenue' },
+  { label: 'Avg Roast Variance', value: DATA.kpis.avg_roast_variance + '°C', sub: 'vs 2.0°C target ceiling' },
+];
+kpiRow.innerHTML = kpiCards.map(k => `
+  <div class="kpi-card">
+    <div class="kpi-label">${k.label}</div>
+    <div class="kpi-value">${k.value}</div>
+    <div class="kpi-sub">${k.sub}</div>
+  </div>`).join('');
+
+const COLORS = ['#a35c33', '#1f7a5c', '#c0392b', '#4b8bbe', '#8a6d3b', '#6b4f3f'];
+
+// Demand forecast chart
+const histLabels = DATA.demand_history.map(d => d.week);
+const fcstLabels = DATA.demand_forecast.map(d => d.week);
+new Chart(document.getElementById('demandChart'), {
+  type: 'line',
+  data: {
+    labels: [...histLabels, ...fcstLabels],
+    datasets: [
+      { label: 'Actual demand', data: DATA.demand_history.map(d => d.actual_units), borderColor: '#4b3621', backgroundColor: '#4b362120', borderWidth: 2, tension: .25, pointRadius: 2 },
+      { label: 'Forecast', data: [...Array(histLabels.length).fill(null), ...DATA.demand_forecast.map(d => d.forecast_units)], borderColor: '#1f7a5c', borderDash: [6,4], borderWidth: 2, tension: .25, pointRadius: 2 },
+      { label: 'Upper 80% CI', data: [...Array(histLabels.length).fill(null), ...DATA.demand_forecast.map(d => d.upper_80)], borderColor: 'rgba(31,122,92,.25)', backgroundColor: 'rgba(31,122,92,.10)', borderWidth: 0, fill: '+1', pointRadius: 0 },
+      { label: 'Lower 80% CI', data: [...Array(histLabels.length).fill(null), ...DATA.demand_forecast.map(d => d.lower_80)], borderColor: 'rgba(31,122,92,.25)', borderWidth: 0, fill: false, pointRadius: 0 },
+    ]
+  },
+  options: { responsive: true, interaction: { mode: 'index', intersect: false }, plugins: { legend: { labels: { boxWidth: 12, font: { size: 11 } } } }, scales: { x: { ticks: { maxTicksLimit: 10, font: { size: 10 } } } } }
+});
+
+// Segment doughnut
+new Chart(document.getElementById('segmentChart'), {
+  type: 'doughnut',
+  data: {
+    labels: DATA.segments.map(s => s.segment),
+    datasets: [{ data: DATA.segments.map(s => s.total_revenue), backgroundColor: COLORS }]
+  },
+  options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }
+});
+
+// SKU bar
+new Chart(document.getElementById('skuChart'), {
+  type: 'bar',
+  data: {
+    labels: DATA.sku_performance.map(s => s.sku_name),
+    datasets: [{ label: 'Revenue', data: DATA.sku_performance.map(s => s.revenue), backgroundColor: '#a35c33' }]
+  },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { ticks: { callback: v => fmtCurrency(v), font: { size: 10 } } } } }
+});
+
+// Roast quality line
+new Chart(document.getElementById('roastChart'), {
+  type: 'line',
+  data: {
+    labels: DATA.roast_quality.map(r => r.week),
+    datasets: [
+      { label: 'Avg temp variance (°C)', data: DATA.roast_quality.map(r => r.avg_variance_c), borderColor: '#c0392b', backgroundColor: '#c0392b20', borderWidth: 2, tension: .3, pointRadius: 1, fill: true },
+    ]
+  },
+  options: { plugins: { legend: { labels: { boxWidth: 12, font: { size: 11 } } } }, scales: { x: { ticks: { maxTicksLimit: 12, font: { size: 10 } } } } }
+});
+
+// Churn table
+const churnBody = document.querySelector('#churnTable tbody');
+churnBody.innerHTML = DATA.churn_risk.map(c => {
+  const risk = c.churn_probability;
+  const tag = risk > 0.66 ? 'tag-high' : risk > 0.33 ? 'tag-med' : 'tag-low';
+  const label = risk > 0.66 ? 'High' : risk > 0.33 ? 'Medium' : 'Low';
+  return `<tr>
+    <td>${c.customer_id}</td><td>${c.region}</td><td>${c.recency_days}</td><td>${c.frequency}</td>
+    <td>${fmtCurrency(c.monetary)}</td><td><span class="tag ${tag}">${label} (${(risk*100).toFixed(0)}%)</span></td>
+  </tr>`;
+}).join('');
+
+// Rules table
+const rulesBody = document.querySelector('#rulesTable tbody');
+rulesBody.innerHTML = DATA.association_rules.map(r => `
+  <tr><td>${r.antecedents}</td><td>${r.consequents}</td><td>${r.support}</td><td>${(r.confidence*100).toFixed(0)}%</td><td>${r.lift}</td></tr>
+`).join('');
+</script>
+</body>
+</html>
